@@ -1,0 +1,65 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - '**'
+
+env:
+  REGISTRY: valerianc
+  REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+  DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.vars.outputs.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set commit SHA
+        id: vars
+        run: echo "sha=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+      - name: Copy .env.example to .env
+        run: cp .env.example .env
+
+      - name: Replace oh-my-zsh setting
+        run: sed -i 's/SHELL_OH_MY_ZSH=true/SHELL_OH_MY_ZSH=false/g' .env
+
+      - name: Prepare docker-compose.prod.yml
+        run: |
+          sed -i "s~__WORKSPACE_IMAGE__~${REGISTRY}/portfolio/laradock/workspace:${GITHUB_SHA::8}~g" docker-compose.prod.yml
+          sed -i "s~__PHP_FPM_IMAGE__~${REGISTRY}/portfolioop2date/laradock/php-fpm:${GITHUB_SHA::8}~g" docker-compose.prod.yml
+          sed -i "s~__PHP_WORKER_IMAGE__~${REGISTRY}/portfolio/laradock/php-worker:${GITHUB_SHA::8}~g" docker-compose.prod.yml
+          sed -i "s~__NGINX_IMAGE__~${REGISTRY}/portfolio/laradock/nginx:${GITHUB_SHA::8}~g" docker-compose.prod.yml
+
+  build-and-push:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [workspace, php-fpm, php-worker, nginx]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to DockerHub
+        run: echo "${DOCKER_HUB_PASSWORD}" | docker login -u optimisapps --password-stdin
+
+      # - name: Login to private registry
+      #   run: echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY}" -u "${REGISTRY_USER}" --password-stdin
+
+      - name: Enable BuildKit
+        run: echo '{"experimental": "enabled"}' | sudo tee /etc/docker/daemon.json
+
+      - name: Docker Compose Build ${{ matrix.service }}
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml build ${{ matrix.service }}
+
+      - name: Docker Compose Push ${{ matrix.service }}
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml push ${{ matrix.service }}
