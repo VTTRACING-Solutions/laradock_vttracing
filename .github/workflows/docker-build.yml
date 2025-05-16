@@ -37,7 +37,7 @@ jobs:
 
   build-and-push:
     needs: setup
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest 
     strategy:
       matrix:
         service: [workspace, php-fpm, php-worker, nginx]
