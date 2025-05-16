@@ -49,7 +49,8 @@ jobs:
         run: echo "${DOCKER_HUB_PASSWORD}" | docker login -u valerianc --password-stdin
 
       - name: Enable BuildKit
-        run: echo '{"experimental": "enabled"}' | sudo tee /etc/docker/daemon.json
+        run: 'echo "{\"experimental\": \"enabled\"}" | sudo tee /etc/docker/daemon.json'
+
 
       - name: Docker Compose Build ${{ matrix.service }}
         run: |
