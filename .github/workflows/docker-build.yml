@@ -50,9 +50,6 @@ jobs:
       - name: Login to DockerHub
         run: echo "${DOCKER_HUB_PASSWORD}" | docker login -u optimisapps --password-stdin
 
-      # - name: Login to private registry
-      #   run: echo "${REGISTRY_PASSWORD}" | docker login "${REGISTRY}" -u "${REGISTRY_USER}" --password-stdin
-
       - name: Enable BuildKit
         run: echo '{"experimental": "enabled"}' | sudo tee /etc/docker/daemon.json
 
