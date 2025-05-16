@@ -10,10 +10,14 @@ env:
   DOCKER_HUB_PASSWORD: ${{ secrets.DOCKER_HUB_PASSWORD }}
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
+  build-and-push:
+    needs: setup
+    runs-on: ubuntu-latest 
     outputs:
       sha: ${{ steps.vars.outputs.sha }}
+    strategy:
+      matrix:
+        service: [workspace, php-fpm, php-worker, nginx]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,16 +38,6 @@ jobs:
           sed -i "s~__PHP_FPM_IMAGE__~${REGISTRY}/portfolio/laradock/php-fpm:${GITHUB_SHA::8}~g" docker-compose.prod.yml
           sed -i "s~__PHP_WORKER_IMAGE__~${REGISTRY}/portfolio/laradock/php-worker:${GITHUB_SHA::8}~g" docker-compose.prod.yml
           sed -i "s~__NGINX_IMAGE__~${REGISTRY}/portfolio/laradock/nginx:${GITHUB_SHA::8}~g" docker-compose.prod.yml
-
-  build-and-push:
-    needs: setup
-    runs-on: ubuntu-latest 
-    strategy:
-      matrix:
-        service: [workspace, php-fpm, php-worker, nginx]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Login to DockerHub
         run: echo "${DOCKER_HUB_PASSWORD}" | docker login -u valerianc --password-stdin
